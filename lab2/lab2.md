@@ -313,7 +313,9 @@ best_fit_free_pages(struct Page *base, size_t n) {
 
 ---
 - 你的 Best-Fit 算法是否有进一步的改进空间？
+
 与 First-fit 类似，上述 First-fit 的优化方法都可在此处使用。
+
 此外，如果申请的大小过大时，可以采用First-fit策略，即设置一个临界值N，若申请的大小大于N时采用First-fit可节约一定的搜索时间。
 #### 扩展练习Challenge：buddy system（伙伴系统）分配算法（需要编程）
 
