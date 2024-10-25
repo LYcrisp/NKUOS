@@ -62,6 +62,7 @@ first-fit 连续物理内存分配算法作为物理内存分配一个很基础�
 通过这些步骤，`default_init_memmap` 函数有效地为指定的内存块准备了状态。
 
 
+
 ##### 3. `default_alloc_pages` 函数
 
 `default_alloc_pages` 函数负责分配指定数量的物理页面，主要功能包括：
