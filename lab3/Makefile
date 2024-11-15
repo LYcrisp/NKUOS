@@ -25,12 +25,12 @@ endif
 
 # define compiler and flags
 HOSTCC		:= gcc
-HOSTCFLAGS	:= -Wall -O2
+HOSTCFLAGS	:= -O2
 
 GDB		:= $(GCCPREFIX)gdb
 
 CC		:= $(GCCPREFIX)gcc
-CFLAGS  := -mcmodel=medany -O2 -s -std=gnu99 -Wall -Wextra
+CFLAGS  := -mcmodel=medany -O2 -s -std=gnu99
 CFLAGS	+= -fno-builtin -nostdinc $(DEFS)
 CFLAGS	+= -fno-stack-protector -ffunction-sections -fdata-sections
 CFLAGS	+= -g
