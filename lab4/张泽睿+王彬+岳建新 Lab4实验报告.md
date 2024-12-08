@@ -367,6 +367,86 @@ static inline void __intr_restore(bool flag) {
 
 两者结合，local_intr_save(intr_flag); ... local_intr_restore(intr_flag) 实现了在进程切换前禁用中断，切换后恢复中断的功能，从而确保进程切换的原子性，避免中断打断进程切换的操作。
 
+**注意！！原子操作的实现如下：**
+
+通过内联汇编 (`asm`) 的方式执行 CSR 指令，分别实现**设置**和**清除**寄存器中的特定位。以下是其如何实现原子操作的详细说明：
+
+```assembly
+#define set_csr(reg, bit) ({ unsigned long __tmp; \
+  asm volatile ("csrrs %0, " #reg ", %1" : "=r"(__tmp) : "rK"(bit)); \
+  __tmp; })
+
+#define clear_csr(reg, bit) ({ unsigned long __tmp; \
+  asm volatile ("csrrc %0, " #reg ", %1" : "=r"(__tmp) : "rK"(bit)); \
+  __tmp; })
+```
+
+#### 1. **指令解析**
+
+##### `csrrs` 和 `csrrc` 指令
+
+- **`csrrs rd, rs1, csr`**（Atomic Read and Set）
+  从 CSR 中读取值到目标寄存器 `rd`，同时使用 `rs1` 中的位掩码对 CSR 的值进行**位设置**。
+- **`csrrc rd, rs1, csr`**（Atomic Read and Clear）
+  从 CSR 中读取值到目标寄存器 `rd`，同时使用 `rs1` 中的位掩码对 CSR 的值进行**位清除**。
+
+这两个指令的关键在于它们同时完成**读取**和**修改**操作，而这一过程在硬件层面是原子的。
+
+------
+
+#### 2. **代码解释**
+
+##### 宏定义 `set_csr`
+
+```
+c复制代码#define set_csr(reg, bit) ({ unsigned long __tmp; \
+  asm volatile ("csrrs %0, " #reg ", %1" : "=r"(__tmp) : "rK"(bit)); \
+  __tmp; })
+```
+
+- **功能**：将寄存器 `reg` 的值读取到变量 `__tmp`，同时设置 `reg` 中由 `bit` 掩码指定的位。
+
+- 内联汇编解读
+
+  ：
+
+  - `"csrrs %0, " #reg ", %1"`：执行 `csrrs` 指令，读取 `reg` 寄存器的值到 `%0`（即 `__tmp`），并根据掩码 `bit` 设置寄存器中的对应位。
+  - `: "=r"(__tmp)`：表示输出到 `__tmp` 的寄存器约束。
+  - `: "rK"(bit)`：表示输入的 `bit`，可以是一个立即数（`K`）或寄存器值（`r`）。
+
+- **结果**：返回寄存器 `reg` 原始的值，同时更新寄存器的特定位。
+
+------
+
+##### 宏定义 `clear_csr`
+
+```
+c复制代码#define clear_csr(reg, bit) ({ unsigned long __tmp; \
+  asm volatile ("csrrc %0, " #reg ", %1" : "=r"(__tmp) : "rK"(bit)); \
+  __tmp; })
+```
+
+- **功能**：将寄存器 `reg` 的值读取到变量 `__tmp`，同时清除 `reg` 中由 `bit` 掩码指定的位。
+
+- 内联汇编解读
+
+  ：
+
+  - `"csrrc %0, " #reg ", %1"`：执行 `csrrc` 指令，读取 `reg` 寄存器的值到 `%0`（即 `__tmp`），并根据掩码 `bit` 清除寄存器中的对应位。
+  - 其余约束与 `set_csr` 类似。
+
+------
+
+#### 3. **原子操作的实现原理**
+
+`csrrs` 和 `csrrc` 指令的关键特性是**硬件原子性**：
+
+1. **单指令完成读写操作**：RISC-V 硬件确保 `csrrs` 和 `csrrc` 在一个时钟周期内完成对 CSR 的读取和修改，而不会被中断打断。
+2. **无中断干扰**：在指令执行期间，硬件保证 CSR 的访问不会受到其他内核或中断的干扰，避免竞态条件。
+
+因此，这些指令天然实现了对寄存器的原子操作，确保在多线程或中断环境下操作 CSR 的一致性和正确性。
+
+
 
 ## 知识点
 
